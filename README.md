@@ -1,6 +1,6 @@
 # BLE Scanner
 
-A Bluetooth Low Energy (BLE) scanning application designed to detect and log mobile phones in the vicinity. This tool is particularly useful for traffic analysis at events, conventions, or public spaces.
+A Bluetooth Low Energy (BLE) scanning application designed to detect and log mobile phones in the vicinity. This tool is particularly useful for traffic analysis at events, conventions, or public spaces. The tool is designed to run on a Raspberry Pi, and was tested on a Pi4.
 
 Possible use cases:
 - People counting / footfall monitoring (anonymously)
