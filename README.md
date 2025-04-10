@@ -27,6 +27,7 @@ This application continuously scans for BLE devices, with a focus on identifying
 
 - Node.js (v14 or higher recommended)
 - Bluetooth adapter with BLE support
+- SQLLite logging database
 - Linux-based system (tested on Raspberry Pi 4)
 
 ## Installation
