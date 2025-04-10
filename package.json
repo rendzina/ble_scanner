@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@abandonware/noble": "^1.9.2-26",
+    "sqlite3": "^5.1.7"
+  }
+}
