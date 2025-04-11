@@ -6,29 +6,37 @@
  * prompt to prevent accidental data loss and performs database optimisation
  * after deletion.
  * 
+ * The database stores BLE device information using device fingerprints
+ * (derived from stable characteristics like manufacturer data and service UUIDs)
+ * rather than MAC addresses, providing more reliable tracking of unique devices
+ * even when they use random or changing addresses for privacy.
+ * 
  * Features:
  * - User confirmation before deletion
  * - Complete removal of all scan records
  * - Database optimisation (VACUUM) to reclaim space
  * - Graceful error handling
+ * - Preserves database schema for fingerprint-based tracking
  * 
  * Dependencies:
  * - sqlite3: Database access
  * - path: File path resolution
  * - readline: User input handling
  * 
- * Created: 2025
+ * Created: 12/Apr/2025
  */
 
+// --- Imports ---
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const readline = require('readline'); // For user confirmation
+const readline = require('readline'); // For user input handling
 
 // --- Database Configuration ---
+// Path to the SQLite database file
 const dbPath = path.resolve(__dirname, 'ble_scans.db');
 
 // --- User Interface Setup ---
-// Create interface for user input
+// Create interface for user input with standard input/output
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -49,8 +57,10 @@ rl.question(`Are you sure you want to DELETE ALL DATA from the 'scans' table in 
 
       console.log(`Connected to the SQLite database at ${dbPath}`);
       console.log("Deleting all records from 'scans' table...");
+      console.log("Note: This will remove all device fingerprints and scan data, but preserve the database structure.");
 
-      // Execute deletion query
+      // --- Data Deletion ---
+      // Execute deletion query and track the number of records deleted
       db.run('DELETE FROM scans', [], function(err) { // Use function() to access this.changes
         if (err) {
           console.error('Error deleting data:', err.message);

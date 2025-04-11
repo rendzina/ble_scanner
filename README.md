@@ -9,12 +9,18 @@ Possible use cases:
 
 ## Overview
 
-This application continuously scans for BLE devices, with a focus on identifying mobile phones based on manufacturer data, service UUIDs, and device names. It logs detailed information about detected devices to both the console and a local SQLite database for later analysis. Note devices may not be individually identifiable if random addressing is used, however overall traffic patterns can be discerned.
+This application scans for BLE devices in regular windows (10 seconds every minute), with a focus on identifying mobile phones based on manufacturer data, service UUIDs, and device names. It uses device fingerprinting to reliably track unique devices even when they use random or changing MAC addresses for privacy. All detected devices are logged to both the console and a local SQLite database for later analysis.
 
 ## Features
 
-- **Configurable Scan Interval**: Adjust the frequency of scans (default: 1 minute)
-- **Ignore List**: Filter out specific devices by their MAC addresses
+- **Window-Based Scanning**: Scans for 10 seconds every minute to balance power usage and detection
+- **Device Fingerprinting**: Reliably track devices using stable characteristics:
+  - Manufacturer data
+  - Service UUIDs
+  - Device names
+  - Address types
+  - Connectable status
+- **Device Memory**: Tracks devices for 5 minutes to avoid duplicate processing
 - **Phone Detection**: Identify likely phones using multiple heuristics:
   - Apple manufacturer ID detection
   - Apple Notification Centre Service (ANCS) UUID detection
@@ -68,7 +74,6 @@ This application continuously scans for BLE devices, with a focus on identifying
    npm install sqlite3
    ```
 
-
 ## Usage
 
 ### Running the Scanner
@@ -82,8 +87,9 @@ node scanner.js
 The scanner will:
 - Load the ignore list (if present)
 - Initialise the database
-- Begin scanning for BLE devices
+- Begin scanning in 10-second windows every minute
 - Log likely phones to the console and database
+- Track devices using fingerprints to handle random addresses
 
 Press `Ctrl+C` to stop the scanner gracefully.
 
@@ -96,102 +102,46 @@ node stats.js
 ```
 
 This will display:
-- Total scan count and unique device statistics
+- Total scan count and unique device statistics (by fingerprint)
 - Time range of collected data
-- Signal strength (RSSI) statistics
+- Signal strength statistics per device fingerprint
 - Busiest hours analysis
-- Device history tracking
+- Device history tracking using fingerprints
 - Manufacturer data analysis
 - Service UUID analysis
-- Device consistency tracking
+- Device consistency tracking across scan windows
 - Transmission power level analysis
-- Local name analysis
+- Most common device names
 
-### Resetting the Database
+### Managing the Database
 
-To clear all data from the database:
+Reset the database (removes all data but preserves structure):
 
 ```
 node reset.js
 ```
 
-You will be prompted to confirm the deletion.
+This will:
+- Prompt for confirmation before deletion
+- Remove all scan records and device fingerprints
+- Optimise the database file
+- Preserve the database schema for future scans
 
-### Ignore List
+## Configuration
 
-Create a file named `ignore_list.json` in the project directory with an array of MAC addresses to ignore:
+The scanner can be configured by modifying the following constants in `scanner.js`:
 
-```json
-[
-  "00:11:22:33:44:55",
-  "aa:bb:cc:dd:ee:ff"
-]
-```
+- `SCAN_WINDOW_DURATION`: Duration of each scan window (default: 10000ms)
+- `SCAN_INTERVAL`: Time between scan windows (default: 60000ms)
+- `DEVICE_MEMORY_DURATION`: How long to remember devices (default: 300000ms)
 
-**Note**: The ignore list will not work for devices with random addresses.
+## Notes
 
-## Database Schema
-
-The application uses a SQLite database with the following schema:
-
-```sql
-CREATE TABLE scans (
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  address TEXT NOT NULL,
-  local_name TEXT,
-  tx_power_level INTEGER,
-  service_uuids TEXT,
-  manufacturer_data TEXT,
-  rssi INTEGER NOT NULL,
-  PRIMARY KEY (timestamp, address)
-)
-```
-
-## Customisation
-
-### Scan Interval
-
-Modify the `SCAN_INTERVAL_MS` constant in `scanner.js` to change the scan frequency:
-
-```javascript
-const SCAN_INTERVAL_MS = 60000; // 1 minute
-// 30000 for 30 seconds
-// 120000 for 2 minutes
-// 300000 for 5 minutes
-```
-
-### Phone Detection Logic
-
-The phone detection logic can be customised in the `scanner.js` file by modifying the filter logic section.
-
-## Troubleshooting
-
-### Bluetooth Adapter Issues
-
-If you encounter issues with the Bluetooth adapter:
-
-1. Ensure the adapter is enabled:
-   ```
-   sudo hciconfig hci0 up
-   ```
-
-2. Check Bluetooth service status:
-   ```
-   sudo systemctl status bluetooth
-   ```
-
-3. Restart the Bluetooth service if needed:
-   ```
-   sudo systemctl restart bluetooth
-   ```
-
-### Database Errors
-
-If you encounter database errors:
-
-1. Check file permissions on the database file
-2. Ensure the directory is writable
-3. Try resetting the database using `reset.js`
+- The scanner uses device fingerprinting to handle random MAC addresses
+- Each scan window lasts 10 seconds to balance power usage and detection
+- Devices are remembered for 5 minutes to avoid duplicate processing
+- The database schema is preserved during resets
+- All timestamps are in UK format (DD/MM/YYYY)
 
 ## License
 

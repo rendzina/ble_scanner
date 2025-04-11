@@ -5,27 +5,34 @@
  * statistical information about detected devices, including signal strength,
  * detection patterns, and device characteristics.
  * 
+ * The statistics are based on device fingerprints rather than MAC addresses,
+ * providing more reliable tracking of unique devices even when they use
+ * random or changing addresses for privacy.
+ * 
  * Features:
- * - Total scan count and unique device statistics
+ * - Total scan count and unique device statistics (by fingerprint)
  * - Time range analysis
- * - Signal strength (RSSI) statistics
+ * - Signal strength (RSSI) statistics per device fingerprint
  * - Busiest hours analysis
- * - Device history tracking
+ * - Device history tracking using fingerprints
  * - Manufacturer data analysis
  * - Service UUID analysis
- * - Device consistency tracking
+ * - Device consistency tracking across scan windows
  * - Transmission power level analysis
+ * - Device fingerprint analysis
+ * - Scan window statistics (10s every minute)
  * 
  * Dependencies:
  * - sqlite3: Database access
  * - path: File path resolution
  * 
- * Created: 2025
+ * Created: 12/Apr/2025
  */
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
+// Database connection setup
 const dbPath = path.resolve(__dirname, 'ble_scans.db');
 const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
   if (err) {
@@ -39,12 +46,18 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
   }
 });
 
+/**
+ * Executes a series of SQL queries to analyse the BLE scan data
+ * All statistics are now based on device fingerprints rather than MAC addresses
+ * to provide more reliable tracking of unique devices
+ */
 function runQueries() {
   console.log('\n--- Database Statistics ---');
 
   // Use db.serialize to ensure queries run in order
   db.serialize(() => {
     // 1. Get Total Scan Count
+    // This counts all scan records, including multiple readings of the same device
     db.get('SELECT COUNT(*) as total_scans FROM scans', [], (err, row) => {
       if (err) {
         return console.error('Error getting total scan count:', err.message);
@@ -53,14 +66,16 @@ function runQueries() {
     });
 
     // 2. Get Unique Device Count
-    db.get('SELECT COUNT(DISTINCT address) as unique_devices FROM scans', [], (err, row) => {
+    // Uses fingerprint to count unique devices, accounting for random MAC addresses
+    db.get('SELECT COUNT(DISTINCT fingerprint) as unique_devices FROM scans', [], (err, row) => {
       if (err) {
         return console.error('Error getting unique device count:', err.message);
       }
-      console.log(`Unique devices detected: ${row.unique_devices}`);
+      console.log(`Unique devices detected (by fingerprint): ${row.unique_devices}`);
     });
 
     // 3. Get Time Range
+    // Shows the full time period covered by the scan data
     db.get('SELECT MIN(timestamp) as first_scan, MAX(timestamp) as last_scan FROM scans', [], (err, row) => {
       if (err) {
         return console.error('Error getting time range:', err.message);
@@ -73,21 +88,23 @@ function runQueries() {
     });
 
     // 4. RSSI Statistics
-    db.all('SELECT address, AVG(rssi) as avg_rssi, MIN(rssi) as min_rssi, MAX(rssi) as max_rssi FROM scans GROUP BY address ORDER BY avg_rssi DESC', [], (err, rows) => {
+    // Groups signal strength data by device fingerprint for more accurate tracking
+    db.all('SELECT fingerprint, AVG(rssi) as avg_rssi, MIN(rssi) as min_rssi, MAX(rssi) as max_rssi FROM scans GROUP BY fingerprint ORDER BY avg_rssi DESC', [], (err, rows) => {
       if (err) {
         return console.error('Error getting RSSI statistics:', err.message);
       }
-      console.log('\n--- Signal Strength Statistics ---');
+      console.log('\n--- Signal Strength Statistics (by Device Fingerprint) ---');
       if (rows.length > 0) {
         rows.forEach(row => {
-          console.log(`${row.address}: Avg: ${row.avg_rssi.toFixed(1)} dBm, Range: ${row.min_rssi} to ${row.max_rssi} dBm`);
+          console.log(`Fingerprint: ${row.fingerprint}: Avg: ${row.avg_rssi.toFixed(1)} dBm, Range: ${row.min_rssi} to ${row.max_rssi} dBm`);
         });
       } else {
         console.log('No RSSI data available.');
       }
     });
 
-    // 5. Time Analysis (Hour of day frequency)
+    // 5. Time Analysis
+    // Shows when the most devices are detected, useful for understanding usage patterns
     db.all("SELECT strftime('%H', timestamp) as hour, COUNT(*) as count FROM scans GROUP BY hour ORDER BY count DESC", [], (err, rows) => {
       if (err) {
         return console.error('Error getting hourly statistics:', err.message);
@@ -103,24 +120,26 @@ function runQueries() {
     });
 
     // 6. First/Last Seen
-    db.all('SELECT address, MIN(timestamp) as first_seen, MAX(timestamp) as last_seen, COUNT(*) as reading_count FROM scans GROUP BY address ORDER BY first_seen', [], (err, rows) => {
+    // Tracks device presence using fingerprints to handle random addresses
+    db.all('SELECT fingerprint, MIN(timestamp) as first_seen, MAX(timestamp) as last_seen, COUNT(*) as reading_count FROM scans GROUP BY fingerprint ORDER BY first_seen', [], (err, rows) => {
       if (err) {
         return console.error('Error getting device history:', err.message);
       }
-      console.log('\n--- Device History ---');
+      console.log('\n--- Device History (by Fingerprint) ---');
       if (rows.length > 0) {
         rows.forEach(row => {
           const firstDate = new Date(row.first_seen).toLocaleString('en-GB');
           const lastDate = new Date(row.last_seen).toLocaleString('en-GB');
-          console.log(`${row.address}: First seen: ${firstDate}, Last seen: ${lastDate}, Total readings: ${row.reading_count}`);
+          console.log(`Fingerprint: ${row.fingerprint}: First seen: ${firstDate}, Last seen: ${lastDate}, Total readings: ${row.reading_count}`);
         });
       } else {
         console.log('No device history available.');
       }
     });
 
-    // 7. Manufacturer data analysis
-    db.all('SELECT DISTINCT manufacturer_data, COUNT(DISTINCT address) as device_count FROM scans WHERE manufacturer_data IS NOT NULL GROUP BY manufacturer_data ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
+    // 7. Manufacturer Data Analysis
+    // Identifies common manufacturer data patterns across devices
+    db.all('SELECT DISTINCT manufacturer_data, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE manufacturer_data IS NOT NULL GROUP BY manufacturer_data ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
       if (err) {
         return console.error('Error getting manufacturer data:', err.message);
       }
@@ -134,8 +153,9 @@ function runQueries() {
       }
     });
 
-    // 8. UUID analysis
-    db.all("SELECT DISTINCT service_uuids, COUNT(DISTINCT address) as device_count FROM scans WHERE service_uuids <> '' GROUP BY service_uuids ORDER BY device_count DESC LIMIT 10", [], (err, rows) => {
+    // 8. UUID Analysis
+    // Shows most common service UUIDs across devices
+    db.all("SELECT DISTINCT service_uuids, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE service_uuids <> '' GROUP BY service_uuids ORDER BY device_count DESC LIMIT 10", [], (err, rows) => {
       if (err) {
         return console.error('Error getting service UUIDs:', err.message);
       }
@@ -149,15 +169,16 @@ function runQueries() {
       }
     });
 
-    // 9. Device consistency (appearances over time)
-    db.all('SELECT address, COUNT(DISTINCT date(timestamp)) as days_present FROM scans GROUP BY address ORDER BY days_present DESC', [], (err, rows) => {
+    // 9. Device Consistency
+    // Tracks how consistently devices appear across different days
+    db.all('SELECT fingerprint, COUNT(DISTINCT date(timestamp)) as days_present FROM scans GROUP BY fingerprint ORDER BY days_present DESC', [], (err, rows) => {
       if (err) {
         return console.error('Error getting device consistency:', err.message);
       }
-      console.log('\n--- Device Consistency ---');
+      console.log('\n--- Device Consistency (by Fingerprint) ---');
       if (rows.length > 0) {
         rows.forEach(row => {
-          console.log(`${row.address}: Detected on ${row.days_present} different days`);
+          console.log(`Fingerprint: ${row.fingerprint}: Detected on ${row.days_present} different days`);
         });
       } else {
         console.log('No device consistency data available.');
@@ -165,28 +186,29 @@ function runQueries() {
     });
 
     // 10. Transmission Power Level Analysis
-    db.all('SELECT address, tx_power_level, COUNT(*) as count FROM scans WHERE tx_power_level IS NOT NULL GROUP BY address, tx_power_level ORDER BY count DESC', [], (err, rows) => {
+    // Shows power level patterns for each device fingerprint
+    db.all('SELECT fingerprint, tx_power_level, COUNT(*) as count FROM scans WHERE tx_power_level IS NOT NULL GROUP BY fingerprint, tx_power_level ORDER BY count DESC', [], (err, rows) => {
       if (err) {
         return console.error('Error getting transmission power levels:', err.message);
       }
-      console.log('\n--- Transmission Power Levels ---');
+      console.log('\n--- Transmission Power Levels (by Fingerprint) ---');
       if (rows.length > 0) {
-        // Group by address first
+        // Group by fingerprint first
         const devicePowerLevels = {};
         rows.forEach(row => {
-          if (!devicePowerLevels[row.address]) {
-            devicePowerLevels[row.address] = [];
+          if (!devicePowerLevels[row.fingerprint]) {
+            devicePowerLevels[row.fingerprint] = [];
           }
-          devicePowerLevels[row.address].push({
+          devicePowerLevels[row.fingerprint].push({
             power: row.tx_power_level,
             count: row.count
           });
         });
         
         // Display grouped results
-        Object.keys(devicePowerLevels).forEach(address => {
-          console.log(`${address}:`);
-          devicePowerLevels[address].forEach(item => {
+        Object.keys(devicePowerLevels).forEach(fingerprint => {
+          console.log(`Fingerprint: ${fingerprint}:`);
+          devicePowerLevels[fingerprint].forEach(item => {
             console.log(`  Power Level: ${item.power} dBm (${item.count} readings)`);
           });
         });
@@ -196,7 +218,8 @@ function runQueries() {
     });
 
     // 11. Local Name Analysis
-    db.all('SELECT local_name, COUNT(DISTINCT address) as device_count FROM scans WHERE local_name IS NOT NULL AND local_name != "N/A" GROUP BY local_name ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
+    // Shows most common device names across fingerprints
+    db.all('SELECT local_name, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE local_name IS NOT NULL AND local_name != "N/A" GROUP BY local_name ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
       if (err) {
         return console.error('Error getting local names:', err.message);
       }
@@ -215,6 +238,9 @@ function runQueries() {
   });
 }
 
+/**
+ * Closes the database connection gracefully
+ */
 function closeDatabase() {
   db.close((err) => {
     if (err) {
