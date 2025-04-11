@@ -29,7 +29,8 @@ const path = require('path');
 const fs = require('fs'); // Import filesystem module
 
 // --- Configuration ---
-const SCAN_INTERVAL_MS = 60000; // Time between scans in milliseconds (1 minute)
+const SCAN_INTERVAL_MS = 15000; // Time between scans in milliseconds (1 minute)
+//15000 for 15 seconds
 //30000 for 30 seconds
 //120000 for 2 minutes
 //300000 for 5 minutes
@@ -90,7 +91,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 // SQL statement for inserting data (prepared statement is often better for performance/security)
-const insertSql = `INSERT INTO scans (address, rssi, local_name, service_uuids, manufacturer_data) VALUES (?, ?, ?, ?, ?)`;
+const insertSql = `INSERT INTO scans (address, local_name, tx_power_level, service_uuids, manufacturer_data, rssi) VALUES (?, ?, ?, ?, ?, ?)`;
 
 // --- Noble Scanning Logic ---
 // Set up event handlers for the Noble BLE library
@@ -135,7 +136,7 @@ noble.on('discover', (peripheral) => {
   const addressType = peripheral.addressType || 'N/A';
   const ad = peripheral.advertisement;
   const localName = ad.localName || 'N/A';
-  const txPowerLevel = ad.txPowerLevel || 'N/A';
+  const txPowerLevel = ad.txPowerLevel;
   const serviceUuids = ad.serviceUuids || [];
   const serviceSolicitationUuid = ad.serviceSolicitationUuid || [];
   const manufacturerData = ad.manufacturerData;
@@ -189,7 +190,7 @@ noble.on('discover', (peripheral) => {
     //console.log('---'); // Separator
 
     // Prepare data for database insertion
-    const params = [peripheral.address, rssi, localName, serviceUuids.join(','), manufacturerDataHex];
+      const params = [peripheral.address, localName, txPowerLevel, serviceUuids.join(','), manufacturerDataHex, rssi];
 
     // Insert into database
     db.run(insertSql, params, function(err) { // Use standard function for 'this.lastID', 'this.changes' if needed
