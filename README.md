@@ -63,9 +63,9 @@ This application scans for BLE devices in regular windows (10 seconds every minu
 
 5. Clone this repository (assumes git is installed):
    ```
-   mkdir ble-scanner
-   cd ble-scanner
-   git clone https://github.com/rendzina/ble-scanner.git
+   mkdir ble_scanner
+   cd ble_scanner
+   git clone https://github.com/rendzina/ble_scanner.git
    ```
 
 6. Install dependencies:
@@ -109,7 +109,7 @@ Press `Ctrl+C` to stop the scanner gracefully.
 
 ### Viewing Statistics
 
-Generate a report of detected devices:
+Generate a report of detected devices and behaviours:
 
 ```
 node stats.js
@@ -145,13 +145,14 @@ This will:
 
 The scanner can be configured by modifying the following constants in `scanner.js`:
 
-- `SCAN_WINDOW_DURATION`: Duration of each scan window (default: 10000ms)
-- `SCAN_INTERVAL`: Time between scan windows (default: 60000ms)
-- `DEVICE_MEMORY_DURATION`: How long to remember devices (default: 300000ms)
+- `SCAN_WINDOW_DURATION`: Duration of each scan window (default: 10000ms) - 10 seconds
+- `SCAN_INTERVAL`: Time between scan windows (default: 60000ms) - 60 seconds
+- `DEVICE_MEMORY_DURATION`: How long to remember devices (default: 300000ms) - 5 minutes
 
 ## Notes
 
-- The scanner uses device fingerprinting to handle random MAC addresses
+- The scanner uses device md5 hash fingerprinting to handle random MAC addresses
+- Do not necessarily assume fingerprints always distinguish unique devices (althought that is the intention) - the hash comprises a combination of many fields read from the device, some of which may well often be blank.
 - Each scan window lasts 10 seconds to balance power usage and detection
 - Devices are remembered for 5 minutes to avoid duplicate processing
 - The database schema is preserved during resets

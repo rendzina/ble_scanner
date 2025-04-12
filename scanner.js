@@ -123,19 +123,21 @@ noble.on('stateChange', (state) => {
 // --- Device Fingerprinting ---
 // Generates a unique fingerprint for each device based on stable characteristics
 // This helps track devices even when they use random MAC addresses
+// For devices with random addresses, uses txPowerLevel instead of localName
+// to maintain privacy while still enabling device tracking
 function generateDeviceFingerprint(peripheral) {
     const ad = peripheral.advertisement;
     const components = [
-        ad.localName || '',
+        // Use txPowerLevel for random addresses, otherwise use localName
+        peripheral.addressType !== 'random' ? (ad.localName || '') : (ad.txPowerLevel?.toString() || ''),
         ad.manufacturerData ? ad.manufacturerData.toString('hex') : '',
         (ad.serviceUuids || []).sort().join(','),
-        peripheral.addressType,
         peripheral.connectable ? 'true' : 'false'
     ];
     
-    return crypto.createHash('md5')
-        .update(components.join('|'))
-        .digest('hex');
+    return crypto.createHash('md5') // use md5 encryption to generate a hash  
+        .update(components.join('|')) // join the components with a pipe
+        .digest('hex'); // return the hash as a hex string
 }
 
 // Process discovered BLE devices
@@ -220,6 +222,7 @@ noble.on('discover', (peripheral) => {
         // Log device information to console
         console.log(`  ID: ${id}`);
         console.log(`  Likely Phone Found, address: ${address}`);
+        console.log(`  Fingerprint: ${fingerprint}`);
         console.log(`  Address type: ${addressType}`);
         console.log(`  Connectable: ${connectable}`);
         console.log(`  Local Name: ${localName || 'N/A'}`);
