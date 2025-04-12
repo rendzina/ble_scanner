@@ -6,7 +6,7 @@
  * 
  * This application scans for Bluetooth Low Energy (BLE) devices in the vicinity,
  * with a focus on identifying mobile phones. It logs device information to both
- * the console and a local SQLite database.
+ * the console and a local SQLite database for later reporting.
  * 
  * Features:
  * - Window-based scanning (10s every minute)

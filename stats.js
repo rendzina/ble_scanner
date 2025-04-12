@@ -1,11 +1,11 @@
 /**
- * BLE Scanner Statistics Application
+ * BLE Scanner Application - Statistics Reporter
  * 
- * This application analyses the data collected by the BLE scanner and provides
- * statistical information about detected devices, including signal strength,
- * detection patterns, and device characteristics.
+ * This utility analyses the data collected by the BLE scanner and provides
+ * a report of statistical information about devices detected, including signal
+ * strength, detection patterns, and device characteristics.
  * 
- * The statistics are based on device fingerprints rather than MAC addresses,
+ * The statistics are based on device 'fingerprints' rather than MAC addresses,
  * providing more reliable tracking of unique devices even when they use
  * random or changing addresses for privacy.
  * 
@@ -31,6 +31,7 @@
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 // Database connection setup
 const dbPath = path.resolve(__dirname, 'ble_scans.db');
@@ -74,7 +75,36 @@ function runQueries() {
       console.log(`Unique devices detected (by fingerprint): ${row.unique_devices}`);
     });
 
-    // 3. Get Time Range
+    // 3. Get Ignored Device Count
+    // Counts how many times devices in the ignore list were detected and skipped
+    const ignoreListPath = path.resolve(__dirname, 'ignore_list.json');
+    let ignoredAddresses = [];
+    try {
+      if (fs.existsSync(ignoreListPath)) {
+        const ignoreListData = fs.readFileSync(ignoreListPath);
+        ignoredAddresses = JSON.parse(ignoreListData);
+        if (Array.isArray(ignoredAddresses)) {
+          // Normalise addresses to lowercase for consistent matching
+          ignoredAddresses = ignoredAddresses.map(addr => addr.toLowerCase());
+        }
+      }
+    } catch (err) {
+      console.error('Error reading ignore list:', err.message);
+    }
+
+    if (ignoredAddresses.length > 0) {
+      const placeholders = ignoredAddresses.map(() => '?').join(',');
+      db.get(`SELECT COUNT(*) as ignored_count FROM scans WHERE LOWER(address) IN (${placeholders})`, ignoredAddresses, (err, row) => {
+        if (err) {
+          return console.error('Error getting ignored device count:', err.message);
+        }
+        console.log(`Devices from ignore list detected and skipped: ${row.ignored_count}`);
+      });
+    } else {
+      console.log('Devices from ignore list detected and skipped: 0 (no devices in ignore list)');
+    }
+
+    // 4. Get Time Range
     // Shows the full time period covered by the scan data
     db.get('SELECT MIN(timestamp) as first_scan, MAX(timestamp) as last_scan FROM scans', [], (err, row) => {
       if (err) {
@@ -87,7 +117,7 @@ function runQueries() {
       }
     });
 
-    // 4. RSSI Statistics
+    // 5. RSSI Statistics
     // Groups signal strength data by device fingerprint for more accurate tracking
     db.all('SELECT fingerprint, AVG(rssi) as avg_rssi, MIN(rssi) as min_rssi, MAX(rssi) as max_rssi FROM scans GROUP BY fingerprint ORDER BY avg_rssi DESC', [], (err, rows) => {
       if (err) {
@@ -103,7 +133,7 @@ function runQueries() {
       }
     });
 
-    // 5. Time Analysis
+    // 6. Time Analysis
     // Shows when the most devices are detected, useful for understanding usage patterns
     db.all("SELECT strftime('%H', timestamp) as hour, COUNT(*) as count FROM scans GROUP BY hour ORDER BY count DESC", [], (err, rows) => {
       if (err) {
@@ -119,7 +149,7 @@ function runQueries() {
       }
     });
 
-    // 6. First/Last Seen
+    // 7. First/Last Seen
     // Tracks device presence using fingerprints to handle random addresses
     db.all('SELECT fingerprint, MIN(timestamp) as first_seen, MAX(timestamp) as last_seen, COUNT(*) as reading_count FROM scans GROUP BY fingerprint ORDER BY first_seen', [], (err, rows) => {
       if (err) {
@@ -137,7 +167,7 @@ function runQueries() {
       }
     });
 
-    // 7. Manufacturer Data Analysis
+    // 8. Manufacturer Data Analysis
     // Identifies common manufacturer data patterns across devices
     db.all('SELECT DISTINCT manufacturer_data, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE manufacturer_data IS NOT NULL GROUP BY manufacturer_data ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
       if (err) {
@@ -153,7 +183,7 @@ function runQueries() {
       }
     });
 
-    // 8. UUID Analysis
+    // 9. UUID Analysis
     // Shows most common service UUIDs across devices
     db.all("SELECT DISTINCT service_uuids, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE service_uuids <> '' GROUP BY service_uuids ORDER BY device_count DESC LIMIT 10", [], (err, rows) => {
       if (err) {
@@ -169,7 +199,7 @@ function runQueries() {
       }
     });
 
-    // 9. Device Consistency
+    // 10. Device Consistency
     // Tracks how consistently devices appear across different days
     db.all('SELECT fingerprint, COUNT(DISTINCT date(timestamp)) as days_present FROM scans GROUP BY fingerprint ORDER BY days_present DESC', [], (err, rows) => {
       if (err) {
@@ -185,7 +215,7 @@ function runQueries() {
       }
     });
 
-    // 10. Transmission Power Level Analysis
+    // 11. Transmission Power Level Analysis
     // Shows power level patterns for each device fingerprint
     db.all('SELECT fingerprint, tx_power_level, COUNT(*) as count FROM scans WHERE tx_power_level IS NOT NULL GROUP BY fingerprint, tx_power_level ORDER BY count DESC', [], (err, rows) => {
       if (err) {
@@ -217,7 +247,7 @@ function runQueries() {
       }
     });
 
-    // 11. Local Name Analysis
+    // 12. Local Name Analysis
     // Shows most common device names across fingerprints
     db.all('SELECT local_name, COUNT(DISTINCT fingerprint) as device_count FROM scans WHERE local_name IS NOT NULL AND local_name != "N/A" GROUP BY local_name ORDER BY device_count DESC LIMIT 10', [], (err, rows) => {
       if (err) {

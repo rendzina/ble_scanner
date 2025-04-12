@@ -1,4 +1,4 @@
-# BLE Scanner
+# BLE Scanner Application
 
 A Bluetooth Low Energy (BLE) scanning application designed to detect and log mobile phones in the vicinity. This tool is particularly useful for traffic analysis at events, conventions, or public spaces. The tool is designed to run on a Raspberry Pi, and was tested on a Pi4.
 
@@ -89,7 +89,21 @@ The scanner will:
 - Initialise the database
 - Begin scanning in 10-second windows every minute
 - Log likely phones to the console and database
-- Track devices using fingerprints to handle random addresses
+- Track devices using fingerprints to handle random MAC addresses
+
+#### Ignore List Configuration
+
+Create a file named `ignore_list.json` in the project directory with an array of MAC addresses to ignore. The addresses should be in lowercase and can be in any of these formats:
+
+```json
+[
+  "00:11:22:33:44:55",
+  "aa-bb-cc-dd-ee-ff",
+  "001122334455"
+]
+```
+
+**Note**: The ignore list will only work for devices with public (non-random) MAC addresses. For devices using random addresses, use the fingerprint-based tracking system instead.
 
 Press `Ctrl+C` to stop the scanner gracefully.
 
