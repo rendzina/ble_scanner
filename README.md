@@ -90,7 +90,7 @@ node scanner.js
 
 The scanner will:
 - Load the ignore list (if present)
-- Initialise the database
+- Initialise the database (assumed to be held locally in the project folder)
 - Begin scanning in 10-second windows every minute
 - Log likely phones to the console and database
 - Track devices using fingerprints to handle random MAC addresses
