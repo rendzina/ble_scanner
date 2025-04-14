@@ -145,6 +145,8 @@ This will:
 - Optimise the database file
 - Preserve the database schema for future scans
 
+![BLE Scanner Interface](git_images/ble_scanner_gui03.png)
+
 ## Configuration
 
 The scanner can be configured by modifying the following constants in `scanner.js`:
