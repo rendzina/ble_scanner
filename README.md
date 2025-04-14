@@ -7,7 +7,7 @@ Possible use cases:
 - Proximity-based experiences (e.g. in a museum)
 - Asset tracking with BLE beacons (Eddystone, iBeacon)
 
-This app is associated with the parallel BLE scanner Dashboard, see https://github.com/rendzina/ble_scanner_dashboard
+This app is associated with the parallel BLE scanner dashboard, see https://github.com/rendzina/ble_scanner_dashboard
 
 ![BLE Scanner Interface](git_images/ble_scanner_gui01.png)
 
@@ -163,7 +163,7 @@ The scanner app can be configured by modifying the following constants in `scann
 ## Notes
 
 - The scanner uses device md5 hash fingerprinting to handle random MAC addresses.
-- Do not necessarily assume fingerprints always distinguish unique devices - the hash comprises a combination of many fields read from the device, some of which may well often be blank. The fingerprints approach is used gtogether with the scan window to try and avoid 'overlogging' the same device successively.
+- Do not necessarily assume fingerprints always distinguish unique devices - the hash comprises a combination of many fields read from the device, some of which may well often be blank. The fingerprints approach is used, together with the scan window, to try and avoid 'overlogging' the same device successively.
 - Each scan window lasts 10 seconds to balance power usage and detection.
 - Devices are remembered for a period (default 5 minutes) to try and avoid duplicate processing.
 - The database schema is preserved during resets.
