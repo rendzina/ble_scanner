@@ -7,6 +7,8 @@ Possible use cases:
 - Proximity-based experiences (e.g. in a museum)
 - Asset tracking with BLE beacons (Eddystone, iBeacon)
 
+![BLE Scanner Interface](public/git_images/ble_scanner_gui01.png)
+
 ## Overview
 
 This application scans for BLE devices in regular windows (10 seconds every minute), with a focus on identifying mobile phones based on manufacturer data, service UUIDs, and device names. It uses device fingerprinting to reliably track unique devices even when they use random or changing MAC addresses for privacy. All detected devices are logged to both the console and a local SQLite database for later analysis.
@@ -35,6 +37,8 @@ This application scans for BLE devices in regular windows (10 seconds every minu
 - Bluetooth adapter with BLE support
 - SQLLite logging database
 - Linux-based system (tested on Raspberry Pi 4)
+
+![BLE Scanner Interface](public/git_images/ble_scanner_gui02.png)
 
 ## Installation
 
