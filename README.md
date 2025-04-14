@@ -7,7 +7,7 @@ Possible use cases:
 - Proximity-based experiences (e.g. in a museum)
 - Asset tracking with BLE beacons (Eddystone, iBeacon)
 
-![BLE Scanner Interface](public/git_images/ble_scanner_gui01.png)
+![BLE Scanner Interface](git_images/ble_scanner_gui01.png)
 
 ## Overview
 
@@ -38,7 +38,7 @@ This application scans for BLE devices in regular windows (10 seconds every minu
 - SQLLite logging database
 - Linux-based system (tested on Raspberry Pi 4)
 
-![BLE Scanner Interface](public/git_images/ble_scanner_gui02.png)
+![BLE Scanner Interface](git_images/ble_scanner_gui02.png)
 
 ## Installation
 
