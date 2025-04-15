@@ -45,40 +45,40 @@ This application scans for BLE devices in regular windows (10 seconds every minu
 ## Installation
 
 1. Ensure the Pi is fully up to date
-   ```
+   ```bash
    sudo apt update && sudo apt upgrade -y
    ```
 
 2. Install Bluetooth tools and dependencies
-   ```
+   ```bash
    sudo apt install bluetooth bluez libbluetooth-dev libudev-dev -y
    ```
 
 3. If you don't already have Node.js installed:
-   ```
+   ```bash
    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
    sudo apt install -y nodejs
    ```
    and check it all installed OK
-   ```
+   ```bash
    node -v
    npm -v
    ```
 
 4. Ensure your Bluetooth adapter is enabled and has the necessary permissions:
-   ```
+   ```bash
    sudo setcap cap_net_raw+eip $(eval readlink -f $(which node))
    ```
 
 5. Clone this repository (assumes git is installed):
-   ```
+   ```bash
    mkdir ble_scanner
    cd ble_scanner
    git clone https://github.com/rendzina/ble_scanner.git
    ```
 
 6. Install dependencies:
-   ```
+   ```bash
    npm install @abandonware/noble
    npm install sqlite3
    ```
@@ -88,8 +88,7 @@ This application scans for BLE devices in regular windows (10 seconds every minu
 ### Running the Scanner
 
 Start the BLE scanner:
-
-```
+```bash
 node scanner.js
 ```
 
@@ -99,6 +98,24 @@ The scanner will:
 - Begin scanning in 10-second windows every minute
 - Log likely phones to the console and database
 - Track devices using fingerprints to handle random MAC addresses. Devices remain anonymous, this strategy is followed to avoid relogging the same device continuously.
+
+### Automatically starting the ble_scanner Node.js applications on boot
+
+The ble_scanner app has been developed to run on a Raspberry Pi computer. To ensure the Node.js app starts up on boot, we can use the pm2 (Process manager) tool. A good explanation of setting this up is at https://rebeccamdeprey.com/blog/automatically-start-nodejs-applications-when-your-raspberry-pi-boots-up. Official page https://pm2.keymetrics.io/docs/usage/quick-start/.
+
+```bash
+sudo npm install pm2 -g
+cd ble_scanner
+pm2 start scanner.js --name ble_scanner
+pm2 startup
+```
+To implement a run on bootup strategy, run the command line created by the 'pm2 startup' command. This updates the $PATH setting.
+
+Check the ExecStart command in /etc/systemd/system/pm2-pi.service, then:
+```bash
+pm2 save
+```
+The Raspberry Pi will now start the app on boot. Also, the commands 'pm2 list', 'start', 'stop', 'delete' and 'logs' can be used as required.
 
 #### Ignore List Configuration
 
@@ -120,7 +137,7 @@ Press `Ctrl+C` to stop the scanner gracefully.
 
 Generate a report of detected devices and behaviours:
 
-```
+```bash
 node stats.js
 ```
 
@@ -140,7 +157,7 @@ This will display:
 
 Reset the database (removes all data but preserves structure):
 
-```
+```bash
 node reset.js
 ```
 
