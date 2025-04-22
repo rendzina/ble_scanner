@@ -117,6 +117,19 @@ pm2 save
 ```
 The Raspberry Pi will now start the app on boot. Also, the commands 'pm2 list', 'start', 'stop', 'delete' and 'logs' can be used as required.
 
+### Alert IP on address with Prowl Push Notification
+
+If the Raspberry Pi with the BLE scanner is to be set up at a new location on a WiFi network, it will be useful to know its IP address so as to allow its web dashboard to be loaded. The Prowl API (https://www.prowlapp.com/) can be used to send a push notification to a configured device to confirm this. To set this up, sudo edit the file /etc/rc.local and add:
+
+```bash
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  result=$(curl -X GET --header "Accept: */*" "https://api.prowlapp.com/publicapi/add?apikey=API_KEYCODE&priority=1&application=PiBoot&description=BLE%20Scanner%20bootup:%20"$_IP)
+  echo $result
+  exit
+fi
+```
+
 #### Ignore List Configuration
 
 Create a file named `ignore_list.json` in the project directory with an array of MAC addresses to ignore. The addresses should be in lowercase and can be in any of these formats:
